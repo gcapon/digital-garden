@@ -11,7 +11,7 @@ const supabase = createClient(
 
 export default function AuthCallbackPage() {
   const router = useRouter();
-  const [debug, setDebug] = useState([]);
+  const [debug, setDebug] = useState<string[]>([]);
 
   useEffect(() => {
     const handleAuth = async () => {
@@ -46,10 +46,8 @@ export default function AuthCallbackPage() {
         addDebug('ERROR: ' + error.message);
       } else {
         addDebug('Session set successfully');
-        addDebug('User email: ' + data.session?.user?.email);
+        addDebug('User email: ' + (data.session?.user?.email || 'none'));
       }
-
-      // Stop here so we can read the debug output
     };
 
     handleAuth();
