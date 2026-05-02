@@ -33,7 +33,7 @@ export default function LoginPage() {
       }
 
       if (mode === 'signup') {
-        const { error } = await supabase.auth.signUp({ email, password });
+        const { error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: 'https://digital-garden-mu-azure.vercel.app/auth/callback' } });
         if (error) throw error;
         setError('Check your email for a confirmation link!');
         setIsLoading(false);
