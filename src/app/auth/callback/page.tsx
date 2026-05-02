@@ -11,17 +11,15 @@ const supabase = createClient(
 
 export default function AuthCallbackPage() {
   const router = useRouter();
-  const [debug, setDebug] = useState('');
-  const [error, setError] = useState('');
+  const [debug, setDebug] = useState([]);
 
   useEffect(() => {
     const handleAuth = async () => {
       const hash = window.location.hash;
-      setDebug('Hash found: ' + hash.substring(0, 50) + '...');
+      addDebug('Hash length: ' + hash.length);
 
       if (!hash || !hash.includes('access_token=')) {
-        setDebug('No access_token in hash. Hash: ' + (hash || 'empty'));
-        setError('no_token');
+        addDebug('No access_token in hash');
         return;
       }
 
@@ -30,31 +28,36 @@ export default function AuthCallbackPage() {
       const accessToken = params.get('access_token');
       const refreshToken = params.get('refresh_token');
 
-      setDebug('Access token found: ' + (accessToken ? 'yes, length=' + accessToken.length : 'no'));
+      addDebug('Access token length: ' + (accessToken?.length || 0));
+      addDebug('Refresh token length: ' + (refreshToken?.length || 0));
 
       if (!accessToken) {
-        setError('no_token');
+        addDebug('ERROR: No access token parsed');
         return;
       }
 
       // Set the session in Supabase client
-      const { data, error: sessionError } = await supabase.auth.setSession({
+      const { data, error } = await supabase.auth.setSession({
         access_token: accessToken,
         refresh_token: refreshToken || '',
       });
 
-      setDebug('setSession result - error: ' + (sessionError?.message || 'none') + ', session: ' + (data.session ? 'yes' : 'no'));
-
-      if (sessionError) {
-        setError(sessionError.message);
-        return;
+      if (error) {
+        addDebug('ERROR: ' + error.message);
+      } else {
+        addDebug('Session set successfully');
+        addDebug('User email: ' + data.session?.user?.email);
       }
 
-      router.push('/admin');
+      // Stop here so we can read the debug output
     };
 
     handleAuth();
-  }, [router]);
+  }, []);
+
+  const addDebug = (msg: string) => {
+    setDebug(prev => [...prev, msg]);
+  };
 
   return (
     <div style={{
@@ -66,35 +69,26 @@ export default function AuthCallbackPage() {
       fontFamily: 'Inter, sans-serif',
       padding: '20px',
     }}>
-      <div style={{ textAlign: 'center', maxWidth: '400px' }}>
-        <p style={{ color: '#2D2A24', fontSize: '16px' }}>Logging you in…</p>
-        {debug && (
+      <div style={{ textAlign: 'center', maxWidth: '500px', width: '100%' }}>
+        <p style={{ color: '#2D2A24', fontSize: '16px', marginBottom: '20px' }}>Auth Callback</p>
+        {debug.length > 0 ? (
           <div style={{
-            marginTop: '20px',
-            padding: '12px',
-            background: '#f5f5f5',
-            border: '1px solid #ddd',
+            padding: '16px',
+            background: '#1a1a1a',
             borderRadius: '8px',
-            fontSize: '12px',
+            fontSize: '13px',
             fontFamily: 'monospace',
             textAlign: 'left',
-            color: '#333',
+            color: '#0f0',
+            whiteSpace: 'pre-wrap',
           }}>
-            DEBUG: {debug}
+            {debug.map((msg, i) => <div key={i}>{msg}</div>)}
           </div>
+        ) : (
+          <p style={{ color: '#666' }}>No debug info yet...</p>
         )}
-        {error && (
-          <div style={{
-            marginTop: '20px',
-            padding: '12px',
-            background: '#FEF2F2',
-            border: '1px solid #FECACA',
-            borderRadius: '8px',
-            color: '#DC2626',
-            fontSize: '14px',
-          }}>
-            Error: {error}
-          </div>
+        {debug.includes('Session set successfully') && (
+          <p style={{ marginTop: '20px', color: '#7A9E7E' }}>✓ Success! Redirecting to admin...</p>
         )}
       </div>
     </div>
