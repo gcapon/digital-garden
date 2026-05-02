@@ -13,16 +13,15 @@ export default function AuthCallbackPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Handle the OAuth callback by exchanging the code for a session
-    supabase.auth.getSession().then(({ data: { session }, error }) => {
+    // Exchange the code in the URL for a session — this is what processes the email confirmation
+    supabase.auth.exchangeCodeForSession(window.location.href).then(({ data, error }) => {
       if (error) {
         console.error('Auth callback error:', error);
         router.push('/login?error=callback_error');
-      } else if (session) {
+      } else if (data.session) {
         // Successful verification — redirect to admin
         router.push('/admin');
       } else {
-        // No session yet — let Supabase finish processing
         router.push('/login?error=no_session');
       }
     });
