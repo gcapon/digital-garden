@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
@@ -10,7 +9,6 @@ const supabase = createClient(
 );
 
 export default function AuthCallbackPage() {
-  const router = useRouter();
   const [debug, setDebug] = useState<string[]>([]);
 
   useEffect(() => {
@@ -32,7 +30,7 @@ export default function AuthCallbackPage() {
         return;
       }
 
-      // Set the session in Supabase client (stores in memory/localStorage)
+      // Set the session in Supabase client
       const { data, error } = await supabase.auth.setSession({
         access_token: accessToken,
         refresh_token: refreshToken || '',
@@ -43,29 +41,23 @@ export default function AuthCallbackPage() {
         return;
       }
 
-      setDebug(prev => [...prev, 'Session set in Supabase client']);
+      setDebug(prev => [...prev, 'Session set successfully!']);
+      setDebug(prev => [...prev, 'User: ' + (data.session?.user?.email || 'none')]);
 
-      // Now also set cookies explicitly so the Next.js middleware can read them
-      // Cookie format that Supabase expects: sb-access-token and sb-refresh-token
+      // Set cookies explicitly for middleware
       document.cookie = `sb-access-token=${accessToken}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax; secure`;
       if (refreshToken) {
         document.cookie = `sb-refresh-token=${refreshToken}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax; secure`;
       }
+      setDebug(prev => [...prev, 'Cookies set']);
 
-      setDebug(prev => [...prev, 'Cookies set explicitly']);
-
-      // Verify by getting session back
-      const { data: verifyData } = await supabase.auth.getSession();
-      setDebug(prev => [...prev, 'getSession after setSession: ' + (verifyData.session?.user?.email || 'no session')]);
-
-      // Redirect after a short delay so you can see the output
-      setTimeout(() => {
-        router.push('/admin');
-      }, 2000);
+      // Use window.location for full page reload so cookies are sent to server
+      setDebug(prev => [...prev, 'Redirecting now...']);
+      window.location.href = '/admin';
     };
 
     handleAuth();
-  }, [router]);
+  }, []);
 
   return (
     <div style={{
