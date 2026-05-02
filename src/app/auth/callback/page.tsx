@@ -16,44 +16,52 @@ export default function AuthCallbackPage() {
     const handleAuth = async () => {
       const hash = window.location.hash;
 
-      // Supabase sends tokens in the URL hash after OAuth
-      if (hash.includes('access_token=')) {
-        // Parse tokens from URL hash
-        const params = new URLSearchParams(hash.substring(1)); // Remove the leading #
-        const accessToken = params.get('access_token');
-        const refreshToken = params.get('refresh_token');
-
-        if (accessToken) {
-          // Set the session manually
-          const { data, error } = await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken || '',
-          });
-
-          if (error) {
-            console.error('Set session error:', error);
+      if (!hash || !hash.includes('access_token=')) {
+        // No tokens in hash - try exchangeCodeForSession (email confirmation flow)
+        const code = new URLSearchParams(window.location.search).get('code');
+        if (code) {
+          const { data, error } = await supabase.auth.exchangeCodeForSession(window.location.href);
+          if (error || !data.session) {
             router.push('/login?error=callback_error');
           } else {
             router.push('/admin');
           }
-          return;
-        }
-      }
-
-      // Fallback: try exchangeCodeForSession (for email confirmation)
-      const code = new URLSearchParams(hash.substring(1)).get('code');
-      if (code) {
-        const { data, error } = await supabase.auth.exchangeCodeForSession(window.location.href);
-        if (error || !data.session) {
-          router.push('/login?error=callback_error');
         } else {
-          router.push('/admin');
+          router.push('/login?error=no_session');
         }
         return;
       }
 
-      // No tokens found - redirect to login
-      router.push('/login?error=no_session');
+      // Parse tokens from URL hash
+      const params = new URLSearchParams(hash.substring(1));
+      const accessToken = params.get('access_token');
+      const refreshToken = params.get('refresh_token');
+
+      if (!accessToken) {
+        router.push('/login?error=no_session');
+        return;
+      }
+
+      // Set the session in Supabase client
+      const { error } = await supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken || '',
+      });
+
+      if (error) {
+        console.error('setSession error:', error);
+        router.push('/login?error=callback_error');
+        return;
+      }
+
+      // Also set cookies explicitly so the Next.js middleware can read them
+      // The sb-access-token cookie is what the middleware looks for
+      document.cookie = `sb-access-token=${accessToken}; path=/; max-age=${60 * 60 * 24 * 7}; samesite=lax; secure`;
+      if (refreshToken) {
+        document.cookie = `sb-refresh-token=${refreshToken}; path=/; max-age=${60 * 60 * 24 * 7}; samesite=lax; secure`;
+      }
+
+      router.push('/admin');
     };
 
     handleAuth();
