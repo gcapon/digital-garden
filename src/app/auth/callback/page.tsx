@@ -16,10 +16,9 @@ export default function AuthCallbackPage() {
   useEffect(() => {
     const handleAuth = async () => {
       const hash = window.location.hash;
-      addDebug('Hash length: ' + hash.length);
 
       if (!hash || !hash.includes('access_token=')) {
-        addDebug('No access_token in hash');
+        setDebug(prev => [...prev, 'No access_token in hash']);
         return;
       }
 
@@ -28,11 +27,8 @@ export default function AuthCallbackPage() {
       const accessToken = params.get('access_token');
       const refreshToken = params.get('refresh_token');
 
-      addDebug('Access token length: ' + (accessToken?.length || 0));
-      addDebug('Refresh token length: ' + (refreshToken?.length || 0));
-
       if (!accessToken) {
-        addDebug('ERROR: No access token parsed');
+        setDebug(prev => [...prev, 'ERROR: No access token parsed']);
         return;
       }
 
@@ -43,19 +39,21 @@ export default function AuthCallbackPage() {
       });
 
       if (error) {
-        addDebug('ERROR: ' + error.message);
-      } else {
-        addDebug('Session set successfully');
-        addDebug('User email: ' + (data.session?.user?.email || 'none'));
+        setDebug(prev => [...prev, 'ERROR: ' + error.message]);
+        return;
       }
+
+      setDebug(prev => [...prev, 'Session set successfully!']);
+      setDebug(prev => [...prev, 'User: ' + (data.session?.user?.email || 'none')]);
+
+      // Redirect to admin after a short delay so you can see the success message
+      setTimeout(() => {
+        router.push('/admin');
+      }, 1500);
     };
 
     handleAuth();
-  }, []);
-
-  const addDebug = (msg: string) => {
-    setDebug(prev => [...prev, msg]);
-  };
+  }, [router]);
 
   return (
     <div style={{
@@ -83,10 +81,7 @@ export default function AuthCallbackPage() {
             {debug.map((msg, i) => <div key={i}>{msg}</div>)}
           </div>
         ) : (
-          <p style={{ color: '#666' }}>No debug info yet...</p>
-        )}
-        {debug.includes('Session set successfully') && (
-          <p style={{ marginTop: '20px', color: '#7A9E7E' }}>✓ Success! Redirecting to admin...</p>
+          <p style={{ color: '#666' }}>Processing...</p>
         )}
       </div>
     </div>
