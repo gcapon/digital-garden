@@ -17,15 +17,16 @@ function AuthCallbackContent() {
   useEffect(() => {
     const handleAuth = async () => {
       const code = searchParams.get('code');
-      const error = searchParams.get('error');
+      const errorParam = searchParams.get('error');
 
-      if (error) {
-        console.error('Auth error:', error);
-        router.push('/login?error=' + error);
+      if (errorParam) {
+        console.error('Auth error:', errorParam);
+        router.push('/login?error=' + errorParam);
         return;
       }
 
       if (code) {
+        // Exchange code for session (handles email confirmation and Google OAuth)
         const { data, error } = await supabase.auth.exchangeCodeForSession(window.location.href);
         if (error) {
           console.error('Session exchange error:', error);
@@ -36,6 +37,7 @@ function AuthCallbackContent() {
           router.push('/login?error=no_session');
         }
       } else {
+        // No code — check if there's already a session (email confirmation fallback)
         const { data: { session }, error } = await supabase.auth.getSession();
         if (error) {
           console.error('Session error:', error);
