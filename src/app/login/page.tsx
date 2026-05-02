@@ -59,7 +59,7 @@ export default function LoginPage() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: 'https://digital-garden-mu-azure.vercel.app/auth/callback'
+          redirectTo: 'https://wosywrkkxfllvashdods.supabase.co/auth/v1/callback'
         }
       });
       if (error) throw error;
