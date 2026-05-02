@@ -32,7 +32,7 @@ export default function AuthCallbackPage() {
         return;
       }
 
-      // Set the session in Supabase client
+      // Set the session in Supabase client (stores in memory/localStorage)
       const { data, error } = await supabase.auth.setSession({
         access_token: accessToken,
         refresh_token: refreshToken || '',
@@ -43,13 +43,25 @@ export default function AuthCallbackPage() {
         return;
       }
 
-      setDebug(prev => [...prev, 'Session set successfully!']);
-      setDebug(prev => [...prev, 'User: ' + (data.session?.user?.email || 'none')]);
+      setDebug(prev => [...prev, 'Session set in Supabase client']);
 
-      // Redirect to admin after a short delay so you can see the success message
+      // Now also set cookies explicitly so the Next.js middleware can read them
+      // Cookie format that Supabase expects: sb-access-token and sb-refresh-token
+      document.cookie = `sb-access-token=${accessToken}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax; secure`;
+      if (refreshToken) {
+        document.cookie = `sb-refresh-token=${refreshToken}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax; secure`;
+      }
+
+      setDebug(prev => [...prev, 'Cookies set explicitly']);
+
+      // Verify by getting session back
+      const { data: verifyData } = await supabase.auth.getSession();
+      setDebug(prev => [...prev, 'getSession after setSession: ' + (verifyData.session?.user?.email || 'no session')]);
+
+      // Redirect after a short delay so you can see the output
       setTimeout(() => {
         router.push('/admin');
-      }, 1500);
+      }, 2000);
     };
 
     handleAuth();
