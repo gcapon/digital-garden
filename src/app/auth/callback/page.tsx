@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
 
@@ -11,24 +11,17 @@ const supabase = createClient(
 
 export default function AuthCallbackPage() {
   const router = useRouter();
+  const [debug, setDebug] = useState('');
+  const [error, setError] = useState('');
 
   useEffect(() => {
     const handleAuth = async () => {
       const hash = window.location.hash;
+      setDebug('Hash found: ' + hash.substring(0, 50) + '...');
 
       if (!hash || !hash.includes('access_token=')) {
-        // No tokens in hash - try exchangeCodeForSession (email confirmation flow)
-        const code = new URLSearchParams(window.location.search).get('code');
-        if (code) {
-          const { data, error } = await supabase.auth.exchangeCodeForSession(window.location.href);
-          if (error || !data.session) {
-            router.push('/login?error=callback_error');
-          } else {
-            router.push('/admin');
-          }
-        } else {
-          router.push('/login?error=no_session');
-        }
+        setDebug('No access_token in hash. Hash: ' + (hash || 'empty'));
+        setError('no_token');
         return;
       }
 
@@ -37,28 +30,24 @@ export default function AuthCallbackPage() {
       const accessToken = params.get('access_token');
       const refreshToken = params.get('refresh_token');
 
+      setDebug('Access token found: ' + (accessToken ? 'yes, length=' + accessToken.length : 'no'));
+
       if (!accessToken) {
-        router.push('/login?error=no_session');
+        setError('no_token');
         return;
       }
 
       // Set the session in Supabase client
-      const { error } = await supabase.auth.setSession({
+      const { data, error: sessionError } = await supabase.auth.setSession({
         access_token: accessToken,
         refresh_token: refreshToken || '',
       });
 
-      if (error) {
-        console.error('setSession error:', error);
-        router.push('/login?error=callback_error');
-        return;
-      }
+      setDebug('setSession result - error: ' + (sessionError?.message || 'none') + ', session: ' + (data.session ? 'yes' : 'no'));
 
-      // Also set cookies explicitly so the Next.js middleware can read them
-      // The sb-access-token cookie is what the middleware looks for
-      document.cookie = `sb-access-token=${accessToken}; path=/; max-age=${60 * 60 * 24 * 7}; samesite=lax; secure`;
-      if (refreshToken) {
-        document.cookie = `sb-refresh-token=${refreshToken}; path=/; max-age=${60 * 60 * 24 * 7}; samesite=lax; secure`;
+      if (sessionError) {
+        setError(sessionError.message);
+        return;
       }
 
       router.push('/admin');
@@ -75,9 +64,38 @@ export default function AuthCallbackPage() {
       justifyContent: 'center',
       background: '#FDFAF4',
       fontFamily: 'Inter, sans-serif',
+      padding: '20px',
     }}>
-      <div style={{ textAlign: 'center' }}>
+      <div style={{ textAlign: 'center', maxWidth: '400px' }}>
         <p style={{ color: '#2D2A24', fontSize: '16px' }}>Logging you in…</p>
+        {debug && (
+          <div style={{
+            marginTop: '20px',
+            padding: '12px',
+            background: '#f5f5f5',
+            border: '1px solid #ddd',
+            borderRadius: '8px',
+            fontSize: '12px',
+            fontFamily: 'monospace',
+            textAlign: 'left',
+            color: '#333',
+          }}>
+            DEBUG: {debug}
+          </div>
+        )}
+        {error && (
+          <div style={{
+            marginTop: '20px',
+            padding: '12px',
+            background: '#FEF2F2',
+            border: '1px solid #FECACA',
+            borderRadius: '8px',
+            color: '#DC2626',
+            fontSize: '14px',
+          }}>
+            Error: {error}
+          </div>
+        )}
       </div>
     </div>
   );
