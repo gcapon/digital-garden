@@ -43,21 +43,29 @@ export default async function TagNotesPage({ params }: PageProps) {
 
   const typedTag = tag as Tag;
 
-  // Get all published notes and filter by tag manually for text[] lookup
-  const { data: allNotes, error: notesError } = await supabase
-    .from('notes')
-    .select('*')
-    .eq('status', 'published')
-    .order('created_at', { ascending: false });
+  let notes: Note[] = [];
+  
+  try {
+    // Get all published notes and filter by tag manually for text[] lookup
+    const { data: allNotes, error: notesError } = await supabase
+      .from('notes')
+      .select('*')
+      .eq('status', 'published')
+      .order('created_at', { ascending: false });
 
-  console.log('DEBUG tag:', slug, typedTag.name);
-  console.log('DEBUG allNotes:', JSON.stringify(allNotes));
-  console.log('DEBUG first note tags:', allNotes?.[0]?.tags);
+    console.log('DEBUG tag:', slug, typedTag.name);
+    console.log('DEBUG allNotes:', JSON.stringify(allNotes));
+    console.log('DEBUG first note tags:', allNotes?.[0]?.tags);
+    console.log('DEBUG tags type:', typeof allNotes?.[0]?.tags, Array.isArray(allNotes?.[0]?.tags));
 
-  // Filter notes that contain this tag (text[] column)
-  const notes = (allNotes || []).filter(note => 
-    note.tags && Array.isArray(note.tags) && note.tags.includes(typedTag.name)
-  ) as Note[];
+    // Filter notes that contain this tag (text[] column)
+    notes = (allNotes || []).filter(note => {
+      console.log('DEBUG checking note tags:', note.tags, 'against:', typedTag.name);
+      return note.tags && Array.isArray(note.tags) && note.tags.includes(typedTag.name);
+    }) as Note[];
+  } catch (e) {
+    console.error('Error filtering notes:', e);
+  }
 
   return (
     <div style={{ minHeight: '100vh' }}>
