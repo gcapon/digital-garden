@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import Link from 'next/link';
-import { Note, NoteTag } from '@/types';
+import { Note } from '@/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,13 +26,10 @@ export default async function AdminNotesPage() {
 
   const { data: notes } = await supabase
     .from('notes')
-    .select(`
-      *,
-      tags:note_tags(tag:id, name, slug)
-    `)
+    .select('*')
     .order('updated_at', { ascending: false });
 
-  const allNotes = (notes || []) as (Note & { tags: NoteTag[] })[];
+  const allNotes = (notes || []) as Note[];
 
   return (
     <div>
@@ -126,24 +123,23 @@ export default async function AdminNotesPage() {
                   </td>
                   <td style={{ padding: '16px 20px', borderBottom: '1px solid #F0EDE8' }}>
                     <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                      {(note.tags as NoteTag[])?.slice(0, 2).map((t: NoteTag) => (
-                        <span
-                          key={t.tag.id}
-                          style={{
-                            padding: '2px 8px',
-                            fontSize: '12px',
-                            background: '#F0EDE8',
-                            borderRadius: '9999px',
-                            color: '#666',
-                          }}
-                        >
-                          {t.tag.name}
-                        </span>
-                      ))}
-                      {(note.tags?.length || 0) > 2 && (
-                        <span style={{ fontSize: '12px', color: '#999' }}>
-                          +{(note.tags?.length || 0) - 2}
-                        </span>
+                      {note.tags && note.tags.length > 0 ? (
+                        note.tags.slice(0, 2).map((tag, i) => (
+                          <span
+                            key={i}
+                            style={{
+                              padding: '2px 8px',
+                              fontSize: '12px',
+                              background: '#F0EDE8',
+                              borderRadius: '9999px',
+                              color: '#666',
+                            }}
+                          >
+                            {tag}
+                          </span>
+                        ))
+                      ) : (
+                        <span style={{ fontSize: '12px', color: '#999' }}>—</span>
                       )}
                     </div>
                   </td>
