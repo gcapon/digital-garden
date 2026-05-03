@@ -44,19 +44,17 @@ export default async function TagNotesPage({ params }: PageProps) {
   const typedTag = tag as Tag;
 
   // Get notes with this tag
-  // Get notes with this tag using the text[] tags column
-  const { data: notesData, error: notesError } = await supabase
+  // Get all published notes and filter by tag manually for text[] lookup
+  const { data: allNotes, error: notesError } = await supabase
     .from('notes')
     .select('*')
-    .textSearch('tags', typedTag.name, { type: 'websearch' })
     .eq('status', 'published')
     .order('created_at', { ascending: false });
 
-  if (notesError) {
-    console.error('Notes query error:', notesError);
-  }
-
-  const notes = (notesData || []) as Note[];
+  // Filter notes that contain this tag (text[] column)
+  const notes = (allNotes || []).filter(note => 
+    note.tags && Array.isArray(note.tags) && note.tags.includes(typedTag.name)
+  ) as Note[];
 
   return (
     <div style={{ minHeight: '100vh' }}>
