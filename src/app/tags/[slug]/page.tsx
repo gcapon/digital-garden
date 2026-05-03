@@ -43,13 +43,16 @@ export default async function TagNotesPage({ params }: PageProps) {
 
   const typedTag = tag as Tag;
 
-  // Get notes with this tag
   // Get all published notes and filter by tag manually for text[] lookup
   const { data: allNotes, error: notesError } = await supabase
     .from('notes')
     .select('*')
     .eq('status', 'published')
     .order('created_at', { ascending: false });
+
+  console.log('DEBUG tag:', slug, typedTag.name);
+  console.log('DEBUG allNotes:', JSON.stringify(allNotes));
+  console.log('DEBUG first note tags:', allNotes?.[0]?.tags);
 
   // Filter notes that contain this tag (text[] column)
   const notes = (allNotes || []).filter(note => 
