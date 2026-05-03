@@ -18,10 +18,10 @@ export function getTagsFromNote(note: Note): Tag[] {
   
   // If tags are string[] (text[] column), return as Tag[]
   if (typeof firstTag === 'string') {
-    return note.tags.map(name => ({
+    return (note.tags as string[]).map(name => ({
       id: name,
-      name: name as string,
-      slug: name as string,
+      name: name,
+      slug: name,
       created_at: ''
     }));
   }
@@ -29,12 +29,13 @@ export function getTagsFromNote(note: Note): Tag[] {
   // If tags are NoteTag[] (from Supabase join), extract the tag
   if (firstTag && typeof firstTag === 'object' && 'tag' in firstTag) {
     return (note.tags as NoteTag[])
-      .filter(nt => nt && nt.tag)
-      .map(nt => nt.tag);
+      .filter(nt => Boolean(nt) && Boolean(nt.tag))
+      .map(nt => nt.tag)
+      .filter(tag => Boolean(tag) && Boolean(tag.id));
   }
   
   // Otherwise assume it's already Tag[]
-  return note.tags as Tag[];
+  return (note.tags as Tag[]).filter(tag => Boolean(tag) && Boolean(tag.id));
 }
 
 export function NoteCard({ note, featured = false }: NoteCardProps) {
