@@ -111,7 +111,7 @@ export function NoteCard({ note, featured = false }: NoteCardProps) {
               </span>
               <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                 {displayTags.map(tag => (
-                  <TagPill key={tag.id} tag={tag} />
+                  <TagPill key={tag.id || tag.name} tag={tag} />
                 ))}
                 {extraTags > 0 && (
                   <span style={{
