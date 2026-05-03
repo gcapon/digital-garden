@@ -24,14 +24,18 @@ export default async function AdminDashboard() {
 
   const { data: { user } } = await supabase.auth.getUser();
 
-  // Fetch stats
-  const [{ data: allNotes }, { data: publishedNotes }, { data: draftNotes }, { data: tags }] =
-    await Promise.all([
-      supabase.from('notes').select('id', { count: 'exact', head: true }),
-      supabase.from('notes').select('id', { count: 'exact', head: true }).eq('status', 'published'),
-      supabase.from('notes').select('id', { count: 'exact', head: true }).eq('status', 'draft'),
-      supabase.from('tags').select('id', { count: 'exact', head: true }),
-    ]);
+  // Fetch stats - use count() for accurate counts
+  const [
+    { count: totalCount },
+    { count: publishedCount },
+    { count: draftCount },
+    { count: tagCount },
+  ] = await Promise.all([
+    supabase.from('notes').select('*', { count: 'exact', head: true }),
+    supabase.from('notes').select('*', { count: 'exact', head: true }).eq('status', 'published'),
+    supabase.from('notes').select('*', { count: 'exact', head: true }).eq('status', 'draft'),
+    supabase.from('tags').select('*', { count: 'exact', head: true }),
+  ]);
 
   // Fetch recent notes
   const { data: recentNotes } = await supabase
@@ -41,10 +45,10 @@ export default async function AdminDashboard() {
     .limit(5);
 
   const stats = [
-    { label: 'Total Notes', value: allNotes?.length || 0, icon: '📝' },
-    { label: 'Published', value: publishedNotes?.length || 0, icon: '✅' },
-    { label: 'Drafts', value: draftNotes?.length || 0, icon: '📝' },
-    { label: 'Tags', value: tags?.length || 0, icon: '🏷️' },
+    { label: 'Total Notes', value: totalCount || 0, icon: '📝' },
+    { label: 'Published', value: publishedCount || 0, icon: '✅' },
+    { label: 'Drafts', value: draftCount || 0, icon: '📝' },
+    { label: 'Tags', value: tagCount || 0, icon: '🏷️' },
   ];
 
   return (
