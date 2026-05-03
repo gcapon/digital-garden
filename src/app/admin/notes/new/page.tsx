@@ -32,6 +32,20 @@ export default function NewNotePage() {
     try {
       const tags = tagsInput.split(',').map(t => t.trim()).filter(Boolean);
 
+      // Ensure all tags exist in the tags table
+      for (const tagName of tags) {
+        const tagSlug = tagName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+        const { data: existingTag } = await supabase
+          .from('tags')
+          .select('id')
+          .eq('slug', tagSlug)
+          .single();
+        
+        if (!existingTag) {
+          await supabase.from('tags').insert({ name: tagName, slug: tagSlug });
+        }
+      }
+
       const { data, error } = await supabase
         .from('notes')
         .insert({
