@@ -12,9 +12,13 @@ interface NoteCardProps {
 
 // Helper to get tags in various formats from Supabase join
 export function getTagsFromNote(note: Note): Tag[] {
-  if (!note.tags) return [];
+  if (!note.tags || !Array.isArray(note.tags)) return [];
+  // If tags are string[] (text[] column), return as-is
+  if (typeof note.tags[0] === 'string') {
+    return note.tags.map(name => ({ id: name, name, slug: name, created_at: '' }));
+  }
   // If tags are NoteTag[] (from Supabase join), extract the tag
-  if (note.tags.length > 0 && 'tag' in note.tags[0]) {
+  if ('tag' in note.tags[0]) {
     return (note.tags as NoteTag[]).map(nt => nt.tag);
   }
   // Otherwise assume it's already Tag[]
