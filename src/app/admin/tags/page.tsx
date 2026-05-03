@@ -1,33 +1,60 @@
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
-import Link from 'next/link';
-import { Tag } from '@/types';
+'use client';
 
-export const dynamic = 'force-dynamic';
+import { useState, useEffect } from 'react';
+import { createClient } from '@supabase/supabase-js';
 
-export default async function AdminTagsPage() {
-  const cookieStore = await cookies();
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll: () => cookieStore.getAll(),
-        setAll: (cookiesToSet) => {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            cookieStore.set(name, value, options);
-          });
-        },
-      },
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
+
+type Tag = {
+  id: string;
+  name: string;
+  slug: string;
+  created_at: string;
+};
+
+export default function AdminTagsPage() {
+  const [tags, setTags] = useState<Tag[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState<string | null>(null);
+
+  const fetchTags = async () => {
+    const { data } = await supabase
+      .from('tags')
+      .select('*')
+      .order('name');
+    setTags(data || []);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchTags();
+  }, []);
+
+  const handleDelete = async (tag: Tag) => {
+    if (!confirm(`Delete tag "${tag.name}"? This cannot be undone.`)) {
+      return;
     }
-  );
 
-  const { data: tags } = await supabase
-    .from('tags')
-    .select('*')
-    .order('name');
+    setDeleting(tag.id);
+    try {
+      const { error } = await supabase
+        .from('tags')
+        .delete()
+        .eq('id', tag.id);
 
-  const allTags = (tags || []) as Tag[];
+      if (error) throw error;
+
+      // Remove from local state
+      setTags(prev => prev.filter(t => t.id !== tag.id));
+    } catch (err: any) {
+      alert('Failed to delete tag: ' + err.message);
+    } finally {
+      setDeleting(null);
+    }
+  };
 
   return (
     <div>
@@ -50,13 +77,15 @@ export default async function AdminTagsPage() {
         padding: '24px',
         boxShadow: '0 2px 4px rgba(45, 42, 36, 0.08)',
       }}>
-        {allTags.length > 0 ? (
+        {loading ? (
+          <p style={{ color: '#999', textAlign: 'center', padding: '40px' }}>Loading...</p>
+        ) : tags.length > 0 ? (
           <div style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
             gap: '16px',
           }}>
-            {allTags.map(tag => (
+            {tags.map(tag => (
               <div
                 key={tag.id}
                 style={{
@@ -85,18 +114,36 @@ export default async function AdminTagsPage() {
                     /{tag.slug}
                   </div>
                 </div>
-                <Link
-                  href={`/tags/${tag.slug}`}
-                  target="_blank"
-                  style={{
-                    padding: '6px 12px',
-                    fontSize: '12px',
-                    color: '#7A9E7E',
-                    textDecoration: 'none',
-                  }}
-                >
-                  View →
-                </Link>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    onClick={() => window.open(`/tags/${tag.slug}`, '_blank')}
+                    style={{
+                      padding: '6px 12px',
+                      fontSize: '12px',
+                      color: '#7A9E7E',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    View →
+                  </button>
+                  <button
+                    onClick={() => handleDelete(tag)}
+                    disabled={deleting === tag.id}
+                    style={{
+                      padding: '6px 12px',
+                      fontSize: '12px',
+                      color: '#DC2626',
+                      background: 'none',
+                      border: 'none',
+                      cursor: deleting === tag.id ? 'wait' : 'pointer',
+                      opacity: deleting === tag.id ? 0.5 : 1,
+                    }}
+                  >
+                    {deleting === tag.id ? 'Deleting...' : 'Delete'}
+                  </button>
+                </div>
               </div>
             ))}
           </div>
