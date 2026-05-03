@@ -46,16 +46,9 @@ export default function EditNotePage({ params }: PageProps) {
         setStatus(data.status || 'draft');
         setFeaturedImage(data.featured_image || '');
 
-        // Fetch tags
-        const { data: noteTags } = await supabase
-          .from('note_tags')
-          .select('tag:tags(name)')
-          .eq('note_id', data.id);
-
-        if (noteTags) {
-          const tagNames = noteTags.map((nt: any) => nt.tag?.name).filter(Boolean);
-          setTagsInput(tagNames.join(', '));
-        }
+      if (data.tags && Array.isArray(data.tags)) {
+        setTagsInput(data.tags.join(', '));
+      }
       }
     };
 
@@ -96,10 +89,8 @@ export default function EditNotePage({ params }: PageProps) {
         .single();
 
       if (note) {
-        // Delete existing tags
-        await supabase.from('note_tags').delete().eq('note_id', note.id);
-
-        // Add new tags
+        // Update tags as text[] on the notes table
+        // Also ensure tags exist in the tags table
         for (const tagName of tags) {
           const tagSlug = tagName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
           let { data: tag } = await supabase
@@ -109,20 +100,17 @@ export default function EditNotePage({ params }: PageProps) {
             .single();
 
           if (!tag) {
-            const { data: newTag } = await supabase
-              .from('tags')
-              .insert({ name: tagName, slug: tagSlug })
-              .select('id')
-              .single();
-            tag = newTag;
-          }
-
-          if (tag) {
             await supabase
-              .from('note_tags')
-              .insert({ note_id: note.id, tag_id: tag.id });
+              .from('tags')
+              .insert({ name: tagName, slug: tagSlug });
           }
         }
+
+        // Update the note's tags column
+        await supabase
+          .from('notes')
+          .update({ tags })
+          .eq('id', note.id);
       }
 
       setSaveMessage('Saved!');

@@ -37,10 +37,7 @@ export default async function NotePage({ params }: PageProps) {
   // Fetch note
   const { data: note, error } = await supabase
     .from('notes')
-    .select(`
-      *,
-      tags:note_tags(tag:id, name, slug)
-    `)
+    .select('*')
     .eq('slug', slug)
     .single();
 

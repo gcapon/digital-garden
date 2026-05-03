@@ -29,10 +29,7 @@ export default async function GardenPage() {
   const [{ data: notes }, { data: tags }] = await Promise.all([
     supabase
       .from('notes')
-      .select(`
-        *,
-        tags:note_tags(tag:id, name, slug)
-      `)
+      .select('*')
       .eq('status', 'published')
       .order('created_at', { ascending: false })
       .limit(20),

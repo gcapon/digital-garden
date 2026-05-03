@@ -27,10 +27,7 @@ export async function GET() {
 
     const { data: notes, error } = await supabase
       .from('notes')
-      .select(`
-        *,
-        tags:note_tags(tag:id, name, slug)
-      `)
+      .select('*')
       .eq('status', 'published')
       .order('created_at', { ascending: false });
 
@@ -99,13 +96,15 @@ export async function POST(request: Request) {
       throw noteError;
     }
 
-    // Handle tags
-    for (const tagName of tags) {
+    // Handle tags - save as text[] on the notes table, and ensure tags exist in tags table
+    const tagNames = tags.map((t: string) => t.trim()).filter(Boolean);
+
+    for (const tagName of tagNames) {
       const tagSlug = slugify(tagName);
-      // Find or create tag
+      // Find or create tag in tags table
       let { data: tag } = await supabase
         .from('tags')
-        .select('id')
+        .select('id, name, slug')
         .eq('slug', tagSlug)
         .single();
 
@@ -113,16 +112,18 @@ export async function POST(request: Request) {
         const { data: newTag } = await supabase
           .from('tags')
           .insert({ name: tagName, slug: tagSlug })
-          .select('id')
+          .select('id, name, slug')
           .single();
         tag = newTag;
       }
+    }
 
-      if (tag) {
-        await supabase
-          .from('note_tags')
-          .insert({ note_id: note.id, tag_id: tag.id });
-      }
+    // Update note with the tags array
+    if (tagNames.length > 0) {
+      await supabase
+        .from('notes')
+        .update({ tags: tagNames })
+        .eq('id', note.id);
     }
 
     // Update note links

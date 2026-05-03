@@ -44,27 +44,15 @@ export default async function TagNotesPage({ params }: PageProps) {
   const typedTag = tag as Tag;
 
   // Get notes with this tag
-  const { data: noteTags } = await supabase
-    .from('note_tags')
-    .select('note_id')
-    .eq('tag_id', tag.id);
+  // Get notes with this tag using the text[] tags column in notes table
+  const { data: notesData } = await supabase
+    .from('notes')
+    .select('*')
+    .contains('tags', [typedTag.name])
+    .eq('status', 'published')
+    .order('created_at', { ascending: false });
 
-  const noteIds = noteTags?.map(nt => nt.note_id) || [];
-
-  let notes: Note[] = [];
-  if (noteIds.length > 0) {
-    const { data: notesData } = await supabase
-      .from('notes')
-      .select(`
-        *,
-        tags:note_tags(tag:id, name, slug)
-      `)
-      .in('id', noteIds)
-      .eq('status', 'published')
-      .order('created_at', { ascending: false });
-
-    notes = (notesData || []) as Note[];
-  }
+  const notes = (notesData || []) as Note[];
 
   return (
     <div style={{ minHeight: '100vh' }}>

@@ -31,10 +31,7 @@ export async function GET(
 
     const { data: note, error } = await supabase
       .from('notes')
-      .select(`
-        *,
-        tags:note_tags(tag:id, name, slug)
-      `)
+      .select('*')
       .eq('slug', slug)
       .single();
 
@@ -147,31 +144,27 @@ export async function PUT(
 
     // Update tags if provided
     if (tags !== undefined) {
-      // Remove existing tags
-      await supabase.from('note_tags').delete().eq('note_id', note.id);
+      const tagNames = tags.map((t: string) => t.trim()).filter(Boolean);
 
-      // Add new tags
-      for (const tagName of tags) {
+      // Update the tags array on the notes table
+      await supabase
+        .from('notes')
+        .update({ tags: tagNames })
+        .eq('id', note.id);
+
+      // Also ensure all tags exist in the tags table
+      for (const tagName of tagNames) {
         const tagSlug = slugify(tagName);
         let { data: tag } = await supabase
           .from('tags')
-          .select('id')
+          .select('id, name, slug')
           .eq('slug', tagSlug)
           .single();
 
         if (!tag) {
-          const { data: newTag } = await supabase
-            .from('tags')
-            .insert({ name: tagName, slug: tagSlug })
-            .select('id')
-            .single();
-          tag = newTag;
-        }
-
-        if (tag) {
           await supabase
-            .from('note_tags')
-            .insert({ note_id: note.id, tag_id: tag.id });
+            .from('tags')
+            .insert({ name: tagName, slug: tagSlug });
         }
       }
     }

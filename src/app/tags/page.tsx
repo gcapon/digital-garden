@@ -24,13 +24,10 @@ export default async function TagsPage() {
 
   const { data: tags } = await supabase
     .from('tags')
-    .select(`
-      *,
-      note_tags(count)
-    `)
+    .select('*')
     .order('name');
 
-  const typedTags = (tags || []) as (Tag & { note_tags: { count: number }[] })[];
+  const typedTags = (tags || []) as Tag[];
 
   return (
     <div style={{ minHeight: '100vh' }}>
@@ -100,9 +97,7 @@ export default async function TagsPage() {
             gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
             gap: '16px',
           }}>
-            {typedTags.map(tag => {
-              const count = tag.note_tags?.[0]?.count || 0;
-              return (
+            {typedTags.map(tag => (
                 <Link
                   key={tag.id}
                   href={`/tags/${tag.slug}`}
@@ -134,12 +129,11 @@ export default async function TagsPage() {
                       {tag.name}
                     </span>
                     <span style={{ fontSize: '13px', color: '#999' }}>
-                      {count} note{count !== 1 ? 's' : ''}
+                      view
                     </span>
                   </div>
                 </Link>
-              );
-            })}
+            ))}
           </div>
         ) : (
           <div style={{

@@ -24,7 +24,7 @@ export async function GET() {
 
     const { data: tags, error } = await supabase
       .from('tags')
-      .select('*, note_count:note_tags(count)')
+      .select('*')
       .order('name');
 
     if (error) throw error;
