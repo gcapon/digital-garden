@@ -30,6 +30,9 @@ export default async function TagNotesPage({ params }: PageProps) {
     }
   );
 
+  console.log('DEBUG looking for tag with slug:', slug);
+
+  
   // Get tag
   const { data: tag } = await supabase
     .from('tags')
@@ -37,7 +40,10 @@ export default async function TagNotesPage({ params }: PageProps) {
     .eq('slug', slug)
     .single();
 
+  console.log('DEBUG tag result:', tag);
+
   if (!tag) {
+    console.log('DEBUG tag not found, calling notFound()');
     notFound();
   }
 
