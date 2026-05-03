@@ -8,28 +8,36 @@ export async function middleware(request: any) {
   // Only protect /admin routes (but not /admin/login)
   if (pathname.startsWith('/admin') && !pathname.startsWith('/admin/login')) {
     const cookieStore = await cookies();
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll: () => cookieStore.getAll(),
-          setAll: (cookiesToSet) => {
-            cookiesToSet.forEach(({ name, value, options }) => {
-              cookieStore.set(name, value, options);
-            });
+    const allCookies = cookieStore.getAll();
+
+    // Try to find the access token cookie
+    const accessToken = allCookies.find(c => c.name === 'sb-access-token')?.value;
+
+    if (accessToken) {
+      // If we have the token cookie, use it directly to get the user
+      const supabase = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+          cookies: {
+            getAll: () => allCookies,
+            setAll: () => {},
           },
-        },
+        }
+      );
+
+      // Pass the access token directly to getUser
+      const { data: { user } } = await supabase.auth.getUser(accessToken);
+
+      if (user) {
+        return NextResponse.next();
       }
-    );
-
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
-      const loginUrl = new URL('/login', request.url);
-      loginUrl.searchParams.set('redirect', pathname);
-      return NextResponse.redirect(loginUrl);
     }
+
+    // No valid session found - redirect to login
+    const loginUrl = new URL('/login', request.url);
+    loginUrl.searchParams.set('redirect', pathname);
+    return NextResponse.redirect(loginUrl);
   }
 
   return NextResponse.next();

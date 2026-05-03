@@ -30,30 +30,25 @@ export default function AuthCallbackPage() {
         return;
       }
 
-      // Set the session in Supabase client
-      const { data, error } = await supabase.auth.setSession({
-        access_token: accessToken,
-        refresh_token: refreshToken || '',
+      setDebug(prev => [...prev, 'Parsed access token, calling server...']);
+
+      // Call our server-side API route to set cookies properly
+      const response = await fetch('/api/auth/set-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ access_token: accessToken, refresh_token: refreshToken }),
       });
 
-      if (error) {
-        setDebug(prev => [...prev, 'ERROR: ' + error.message]);
-        return;
+      const result = await response.json();
+      setDebug(prev => [...prev, 'Server response: ' + JSON.stringify(result)]);
+
+      if (response.ok) {
+        setDebug(prev => [...prev, 'SUCCESS - Cookies set! Redirecting...']);
+        // Full page redirect so browser sends the new cookies
+        window.location.href = '/admin';
+      } else {
+        setDebug(prev => [...prev, 'ERROR: ' + result.error]);
       }
-
-      setDebug(prev => [...prev, 'Session set successfully!']);
-      setDebug(prev => [...prev, 'User: ' + (data.session?.user?.email || 'none')]);
-
-      // Set cookies explicitly for middleware
-      document.cookie = `sb-access-token=${accessToken}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax; secure`;
-      if (refreshToken) {
-        document.cookie = `sb-refresh-token=${refreshToken}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax; secure`;
-      }
-      setDebug(prev => [...prev, 'Cookies set']);
-
-      // Use window.location for full page reload so cookies are sent to server
-      setDebug(prev => [...prev, 'Redirecting now...']);
-      window.location.href = '/admin';
     };
 
     handleAuth();
